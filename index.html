@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Sapphire File — Colorful Escape Room</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=IBM+Plex+Mono:wght@500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f0f2f8;
+    --panel: #ffffff;
+    --card: #ffffff;
+    --shadow: 0 8px 30px rgba(0,0,0,0.12);
+    --text: #1a1a2e;
+    --text-muted: #6b6b7a;
+    --amber: #f5a623;
+    --green: #2ecc71;
+    --red: #e74c5e;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  /* ===== ROOM BACKGROUNDS ===== */
+  .room-bg {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    transition: all 1s ease;
+  }
+  .room-bg .pattern {
+    position: absolute;
+    inset: 0;
+    opacity: 0.08;
+    background-image: radial-gradient(circle at 20% 50%, rgba(255,255,255,0.3) 0%, transparent 50%),
+                      radial-gradient(circle at 80% 80%, rgba(255,255,255,0.2) 0%, transparent 40%);
+  }
+
+  /* Room 1: Museum — Blue */
+  .bg-museum { background: linear-gradient(135deg, #e8f0fe 0%, #b6d4fe 50%, #7bb3f0 100%); }
+  /* Room 2: Office — Green */
+  .bg-office { background: linear-gradient(135deg, #e8f8ee 0%, #a8e6cf 50%, #6bc5a0 100%); }
+  /* Room 3: Interrogation — Purple */
+  .bg-interrogation { background: linear-gradient(135deg, #f3e8ff 0%, #d4a8ff 50%, #b07cdb 100%); }
+  /* Room 4: Evidence — Gold */
+  .bg-evidence { background: linear-gradient(135deg, #fef9e7 0%, #f9e68a 50%, #f1c40f 100%); }
+  /* Room 5: Lawyer — Coral */
+  .bg-lawyer { background: linear-gradient(135deg, #fde8e8 0%, #f8a5a5 50%, #e87070 100%); }
+  /* Room 6: Final — Rainbow */
+  .bg-final { background: linear-gradient(135deg, #e8f0fe 0%, #f3e8ff 25%, #fde8e8 50%, #e8f8ee 75%, #fef9e7 100%); }
+
+  .stage {
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 24px 16px 80px;
+    position: relative;
+    z-index: 2;
+  }
+
+  /* ===== TOP BAR WITH COINS ===== */
+  .top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 20px;
+    background: rgba(255,255,255,0.85);
+    backdrop-filter: blur(12px);
+    border-radius: 16px;
+    margin-bottom: 16px;
+    box-shadow: var(--shadow);
+    flex-wrap: wrap;
+  }
+  .case-title {
+    font-family: 'Special Elite', monospace;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .coin-display {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 1.2rem;
+    background: rgba(245,166,35,0.15);
+    padding: 6px 16px;
+    border-radius: 30px;
+    border: 1px solid rgba(245,166,35,0.3);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .coin-display span { color: var(--amber); }
+  .clock {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 1rem;
+    background: rgba(0,0,0,0.05);
+    padding: 6px 14px;
+    border-radius: 30px;
+  }
+
+  /* ===== TABS ===== */
+  .tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+  }
+  .tab {
+    flex: 1;
+    min-width: 70px;
+    padding: 8px 4px;
+    text-align: center;
+    border-radius: 12px 12px 0 0;
+    background: rgba(255,255,255,0.4);
+    border: 1px solid rgba(0,0,0,0.06);
+    border-bottom: none;
+    font-family: 'Special Elite', monospace;
+    font-size: 0.55rem;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    transition: all 0.25s ease;
+    cursor: default;
+  }
+  .tab .num { display: block; font-size: 0.5rem; margin-bottom: 2px; }
+  .tab.active {
+    background: white;
+    color: var(--text);
+    border-color: var(--amber);
+    transform: translateY(-3px);
+    box-shadow: 0 -4px 15px rgba(245,166,35,0.2);
+  }
+  .tab.done { color: var(--green); }
+  .tab.done .num::after { content: " ✓"; }
+  .tab.locked { opacity: 0.4; }
+
+  .progress-wrap {
+    height: 10px;
+    background: rgba(0,0,0,0.06);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 24px;
+  }
+  .progress-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #f5a623, #f1c40f, #2ecc71, #4a90d9, #9b59b6);
+    transition: width 0.6s ease;
+    border-radius: 10px;
+  }
+
+  /* ===== ROOM ===== */
+  .room { display: none; }
+  .room.active { display: block; animation: fadeUp 0.5s ease; }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(15px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .room-intro {
+    background: rgba(255,255,255,0.85);
+    backdrop-filter: blur(12px);
+    border-radius: 16px;
+    padding: 18px 22px;
+    margin-bottom: 18px;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    box-shadow: var(--shadow);
+    border: 1px solid rgba(255,255,255,0.3);
+  }
+  .room-icon { font-size: 2.2rem; flex-shrink: 0; }
+  .room-intro h2 {
+    font-family: 'Special Elite', monospace;
+    margin: 0 0 4px;
+    font-size: 1.2rem;
+    color: var(--text);
+  }
+  .room-intro p {
+    margin: 0;
+    color: var(--text-muted);
+    line-height: 1.5;
+    font-size: 0.9rem;
+  }
+  .task-counter {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    margin-top: 6px;
+  }
+
+  .card {
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 16px;
+    padding: 20px 22px;
+    margin-bottom: 14px;
+    box-shadow: var(--shadow);
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+  }
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 5px;
+    height: 100%;
+    background: var(--amber);
+    border-radius: 16px 0 0 16px;
+    transition: background 0.3s ease;
+  }
+  .card.correct::before { background: var(--green); }
+  .card.incorrect::before { background: var(--red); }
+  .card.correct { border-color: var(--green); box-shadow: 0 0 30px rgba(46,204,113,0.15); }
+  .card.incorrect { border-color: var(--red); box-shadow: 0 0 30px rgba(231,76,94,0.15); }
+
+  .evidence-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--amber);
+    background: rgba(245,166,35,0.1);
+    border: 1px solid rgba(245,166,35,0.2);
+    padding: 3px 10px;
+    border-radius: 20px;
+    margin-bottom: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .task-icon { font-size: 0.9rem; }
+  .prompt {
+    font-size: 1rem;
+    line-height: 1.6;
+    margin-bottom: 12px;
+  }
+  .prompt b { color: var(--amber); }
+
+  input[type="text"] {
+    background: rgba(0,0,0,0.04);
+    border: 1px solid rgba(0,0,0,0.1);
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.9rem;
+    padding: 10px 14px;
+    border-radius: 8px;
+    width: 100%;
+    max-width: 340px;
+    outline: none;
+    transition: border-color 0.3s;
+  }
+  input[type="text"]:focus { border-color: var(--amber); }
+
+  .options {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 4px;
+  }
+  .opt {
+    text-align: left;
+    background: rgba(0,0,0,0.04);
+    border: 1px solid rgba(0,0,0,0.08);
+    color: var(--text);
+    padding: 10px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+  }
+  .opt:hover { background: rgba(245,166,35,0.06); border-color: var(--amber-dim); }
+  .opt.selected { border-color: var(--amber); background: rgba(245,166,35,0.1); }
+  .opt.opt-correct { border-color: var(--green); background: rgba(46,204,113,0.1); }
+  .opt.opt-wrong { border-color: var(--red); background: rgba(231,76,94,0.1); }
+  .opt.disabled { pointer-events: none; opacity: 0.6; }
+
+  .btn-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 14px;
+    flex-wrap: wrap;
+  }
+  button {
+    font-family: 'Special Elite', monospace;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    background: var(--amber);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 30px;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 15px rgba(245,166,35,0.3);
+  }
+  button:hover { transform: translateY(-2px); box-shadow: 0 6px 25px rgba(245,166,35,0.4); }
+  button:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+  button.secondary {
+    background: transparent;
+    border: 1px solid rgba(0,0,0,0.1);
+    color: var(--text-muted);
+    box-shadow: none;
+  }
+  button.secondary:hover { border-color: var(--amber); color: var(--amber); box-shadow: none; }
+
+  .feedback {
+    margin-top: 12px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    display: none;
+    animation: fadeUp 0.3s;
+  }
+  .feedback.show { display: block; }
+  .feedback.ok {
+    background: rgba(46,204,113,0.1);
+    color: #1a7a42;
+    border: 1px solid rgba(46,204,113,0.2);
+  }
+  .feedback.no {
+    background: rgba(231,76,94,0.1);
+    color: #a9323e;
+    border: 1px solid rgba(231,76,94,0.2);
+  }
+
+  .stamp {
+    position: absolute;
+    top: 14px;
+    right: 16px;
+    font-family: 'Special Elite', monospace;
+    font-size: 0.6rem;
+    padding: 3px 10px;
+    border-radius: 20px;
+    opacity: 0;
+    transition: all 0.3s;
+  }
+  .stamp.show { opacity: 1; }
+  .stamp.correct-stamp { background: rgba(46,204,113,0.15); color: var(--green); border: 1px solid var(--green); }
+  .stamp.wrong-stamp { background: rgba(231,76,94,0.15); color: var(--red); border: 1px solid var(--red); }
+
+  /* ===== CERTIFICATE ===== */
+  .cert-wrap {
+    display: none;
+    text-align: center;
+    position: relative;
+    z-index: 3;
+  }
+  .cert-wrap.show {
+    display: block;
+    animation: fadeUp 0.6s ease;
+  }
+  .certificate {
+    background: white;
+    color: #1a1a2e;
+    border-radius: 20px;
+    padding: 40px 34px;
+    box-shadow: var(--shadow);
+    border: 2px solid var(--amber);
+  }
+  .certificate h1 {
+    font-family: 'Special Elite', monospace;
+    font-size: 1.5rem;
+    margin: 6px 0 2px;
+  }
+  .certificate .sub {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 3px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+  }
+  .certificate .name {
+    font-family: 'Special Elite', monospace;
+    font-size: 2rem;
+    margin: 20px 0 4px;
+    color: var(--amber);
+    border-bottom: 2px solid var(--amber);
+    display: inline-block;
+    padding: 0 10px 6px;
+  }
+  .certificate .line { font-size: 0.95rem; margin: 14px 0; color: var(--text-muted); }
+  .certificate .time-stat { font-family: 'IBM Plex Mono', monospace; font-size: 1rem; color: var(--text); }
+  .certificate .coin-total {
+    font-family: 'Special Elite', monospace;
+    font-size: 1.8rem;
+    color: var(--amber);
+    margin: 10px 0;
+  }
+  .seal {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    border: 3px solid var(--red);
+    color: var(--red);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 16px auto 6px;
+    transform: rotate(-8deg);
+    font-family: 'Special Elite', monospace;
+    font-size: 0.6rem;
+    text-align: center;
+    line-height: 1.3;
+  }
+
+  @media (max-width: 600px) {
+    .top-bar { flex-direction: column; align-items: stretch; text-align: center; }
+    .tab { min-width: 50px; font-size: 0.5rem; }
+    .room-intro { flex-direction: column; }
+    .stage { padding: 16px 10px 60px; }
+  }
+  @media print {
+    body * { visibility: hidden; }
+    .certificate, .certificate * { visibility: visible; }
+    .certificate { position: absolute; top: 0; left: 0; width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== BACKGROUND ===== -->
+<div id="roomBg" class="room-bg bg-museum"><div class="pattern"></div></div>
+
+<!-- ===== STAGE ===== -->
+<div class="stage">
+
+  <!-- Top Bar: Title, Coins, Timer -->
+  <div class="top-bar">
+    <div class="case-title">🔍 The Sapphire File</div>
+    <div class="coin-display">⭐ <span id="coinCount">0</span> / <span id="totalCoins">30</span></div>
+    <div class="clock">⏱️ <span id="timer">00:00</span></div>
+  </div>
+
+  <!-- Tabs and Progress -->
+  <div class="tabs" id="tabs"></div>
+  <div class="progress-wrap"><div class="progress-fill" id="progressFill"></div></div>
+
+  <!-- Rooms container -->
+  <div id="rooms"></div>
+
+  <!-- Certificate -->
+  <div class="cert-wrap" id="certWrap">
+    <div class="certificate">
+      <div class="sub">Metropolitan Investigation Bureau</div>
+      <h1>Certificate of Case Resolution</h1>
+      <div class="line">This confirms that</div>
+      <div class="name" id="certName">Detective ___</div>
+      <div class="line">has successfully solved <b>The Sapphire File</b><br>by mastering the Passive Voice across all tenses.</div>
+      <div class="coin-total">⭐ <span id="certCoins">0</span> stars collected</div>
+      <div class="time-stat">Case closed in <span id="certTime">00:00</span></div>
+      <div class="seal">CASE<br>SOLVED</div>
+    </div>
+    <div class="btn-row" style="justify-content:center; margin-top:18px;">
+      <button onclick="window.print()">🖨️ Print Certificate</button>
+      <button class="secondary" onclick="location.reload()">🔄 New Case</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ===== ICONS (emoji based) =====
+const roomIcons = {
+  magnifier: '🔍',
+  folder: '📁',
+  handcuffs: '⛓️',
+  fingerprint: '🖐️',
+  scale: '⚖️',
+  task_gap: '✏️',
+  task_transform: '🔄',
+  task_mc: '🔘'
+};
+
+// ===== TASK GENERATOR (5 per room) =====
+function generateTasks(roomType) {
+  const base = {
+    present: [
+      { type:"gap", tag:"Security Log", prompt:"The museum <b>___</b> (visit) by thousands of tourists every year.", answers:["is visited"], ok:"Correct! 'is visited'", no:"Answer: 'is visited'" },
+      { type:"transform", tag:"Rewrite", prompt:"Active: <b>'Guards check the cameras every hour.'</b><br>Rewrite in passive.", answers:["the cameras are checked by the guards every hour","the cameras are checked every hour"], ok:"Correct!", no:"Answer: 'The cameras are checked by the guards every hour.'" },
+      { type:"mc", tag:"Note", prompt:"Which is correct passive?", options:["The alarm is activate.","The alarm is activated.","The alarm activated.","The alarm was activate."], correct:1, ok:"Correct!", no:"Answer: 'The alarm is activated.'" },
+      { type:"gap", tag:"Ticket Office", prompt:"Tickets <b>___</b> (sell) at the front desk.", answers:["are sold"], ok:"Correct!", no:"Answer: 'are sold'" },
+      { type:"transform", tag:"Rewrite", prompt:"Active: <b>'The staff clean the galleries every morning.'</b><br>Rewrite in passive.", answers:["the galleries are cleaned by the staff every morning","the galleries are cleaned every morning"], ok:"Correct!", no:"Answer: 'The galleries are cleaned by the staff every morning.'" }
+    ],
+    past: [
+      { type:"gap", tag:"Incident", prompt:"The sapphire <b>___</b> (steal) last Friday.", answers:["was stolen"], ok:"Correct!", no:"Answer: 'was stolen'" },
+      { type:"transform", tag:"Rewrite", prompt:"Active: <b>'Someone broke the display case.'</b><br>Rewrite in passive.", answers:["the display case was broken","the display case was broken by someone"], ok:"Correct!", no:"Answer: 'The display case was broken.'" },
+      { type:"mc", tag:"Memo", prompt:"Which is correct passive?", options:["The footage was delete.","The footage deleted.","The footage was deleted.","The footage is deleted."], correct:2, ok:"Correct!", no:"Answer: 'The footage was deleted.'" },
+      { type:"gap", tag:"Notes", prompt:"The lights <b>___</b> (turn off) before midnight.", answers:["were turned off"], ok:"Correct!", no:"Answer: 'were turned off'" },
+      { type:"transform", tag:"Rewrite", prompt:"Active: <b>'The thief opened the window quietly.'</b><br>Rewrite in passive.", answers:["the window was opened quietly","the window was opened quietly by the thief"], ok:"Correct!", no:"Answer: 'The window was opened quietly.'" }
+    ],
+    future: [
+      { type:"gap", tag:"Plan", prompt:"The suspect <b>___</b> (question) tomorrow morning.", answers:["will be questioned"], ok:"Correct!", no:"Answer: 'will be questioned'" },
+      { type:"transform", tag:"Rewrite", prompt:"Active: <b>'The detective will interview the staff.'</b><br>Rewrite in passive.", answers:["the staff will be interviewed by the detective","the staff will be interviewed"], ok:"Correct!", no:"Answer: 'The staff will be interviewed by the detective.'" },
+      { type:"mc", tag:"Note", prompt:"Which is correct passive?", options:["New evidence will find soon.","New evidence will be find soon.","New evidence will be found soon.","New evidence is found soon."], correct:2, ok:"Correct!", no:"Answer: 'will be found soon.'" },
+      { type:"gap", tag:"Schedule", prompt:"The results <b>___</b> (announce) next week.", answers:["will be announced"], ok:"Correct!", no:"Answer: 'will be announced'" },
+      { type:"transform", tag:"Rewrite", prompt:"Active: <b>'The judge will review the case files.'</b><br>Rewrite in passive.", answers:["the case files will be reviewed by the judge","the case files will be reviewed"], ok:"Correct!", no:"Answer: 'The case files will be reviewed by the judge.'" }
+    ],
+    mixed: [
+      { type:"gap", tag:"Policy", prompt:"Every clue <b>___</b> (record) in this file cabinet. (Present)", answers:["is recorded"], ok:"Correct!", no:"Answer: 'is recorded'" },
+      { type:"transform", tag:"Rewrite", prompt:"Active: <b>'The thief left a glove at the scene.'</b><br>Rewrite in passive. (Past)", answers:["a glove was left at the scene","a glove was left at the scene by the thief"], ok:"Correct!", no:"Answer: 'A glove was left at the scene.'" },
+      { type:"mc", tag:"Prediction", prompt:"Which is correct passive?", options:["The case will be close by Friday.","The case will close by Friday.","The case will be closed by Friday.","The case is closed by Friday."], correct:2, ok:"Correct!", no:"Answer: 'will be closed by Friday.'" },
+      { type:"gap", tag:"Vault", prompt:"This safe <b>___</b> (open) only by the manager. (Present)", answers:["is opened"], ok:"Correct!", no:"Answer: 'is opened'" },
+      { type:"transform", tag:"Rewrite", prompt:"Active: <b>'The team will analyze the fingerprints tomorrow.'</b><br>Rewrite in passive. (Future)", answers:["the fingerprints will be analyzed by the team tomorrow","the fingerprints will be analyzed tomorrow"], ok:"Correct!", no:"Answer: 'The fingerprints will be analyzed tomorrow.'" }
+    ],
+    modal: [
+      { type:"gap", tag:"Protocol", prompt:"This information <b>___</b> (must / share) with the police immediately.", answers:["must be shared"], ok:"Correct!", no:"Answer: 'must be shared'" },
+      { type:"transform", tag:"Rewrite", prompt:"Active: <b>'You should lock the vault every night.'</b><br>Rewrite in passive.", answers:["the vault should be locked every night"], ok:"Correct!", no:"Answer: 'The vault should be locked every night.'" },
+      { type:"mc", tag:"Legal", prompt:"Which is correct passive?", options:["This letter can written by anyone.","This letter can be write by anyone.","This letter can be written by anyone.","This letter can being written by anyone."], correct:2, ok:"Correct!", no:"Answer: 'can be written by anyone.'" },
+      { type:"gap", tag:"Court", prompt:"The suspect <b>___</b> (may / release) if there isn't enough evidence.", answers:["may be released"], ok:"Correct!", no:"Answer: 'may be released'" },
+      { type:"transform", tag:"Rewrite", prompt:"Active: <b>'They must interview every witness.'</b><br>Rewrite in passive.", answers:["every witness must be interviewed"], ok:"Correct!", no:"Answer: 'Every witness must be interviewed.'" }
+    ],
+    final: [
+      { type:"gap", tag:"Final", prompt:"The truth <b>___</b> (reveal) at last. (Past)", answers:["was revealed"], ok:"Correct!", no:"Answer: 'was revealed'" },
+      { type:"transform", tag:"Rewrite", prompt:"Active: <b>'The guard will identify the real thief tomorrow.'</b><br>Rewrite in passive. (Future)", answers:["the real thief will be identified by the guard tomorrow","the real thief will be identified tomorrow"], ok:"Correct!", no:"Answer: 'The real thief will be identified tomorrow.'" },
+      { type:"mc", tag:"Closing", prompt:"Which is correct passive?", options:["This case is remembered for years.","This case will remembered for years.","This case will be remember for years.","This case will be remembered for years."], correct:3, ok:"Correct!", no:"Answer: 'will be remembered for years.'" },
+      { type:"gap", tag:"Archive", prompt:"All documents <b>___</b> (sign) by the director yesterday. (Past)", answers:["were signed"], ok:"Correct!", no:"Answer: 'were signed'" },
+      { type:"transform", tag:"Rewrite", prompt:"Active: <b>'They will publish the full report next month.'</b><br>Rewrite in passive. (Future)", answers:["the full report will be published next month"], ok:"Correct!", no:"Answer: 'The full report will be published next month.'" }
+    ]
+  };
+  return base[roomType] || [];
+}
+
+// ===== ROOMS DEFINITION =====
+const rooms = [
+  { id: 'museum', title: "The Museum Hall", tag: "Present Simple", icon: '🔍', bg: 'bg-museum', intro: "You step into the grand hall. Security routines happen every day — study them closely.", tasks: generateTasks('present') },
+  { id: 'office', title: "Curator's Office", tag: "Past Simple", icon: '📁', bg: 'bg-office', intro: "Papers scattered. Something happened on the night of the theft — clues in the past.", tasks: generateTasks('past') },
+  { id: 'interrogation', title: "Interrogation Room", tag: "Future Simple", icon: '⛓️', bg: 'bg-interrogation', intro: "Suspects waiting. The investigation isn't over — describe what will happen next.", tasks: generateTasks('future') },
+  { id: 'evidence', title: "Evidence Room", tag: "Mixed Review", icon: '🖐️', bg: 'bg-evidence', intro: "Files spanning years. Present, past, future all appear — read carefully.", tasks: generateTasks('mixed') },
+  { id: 'lawyer', title: "Lawyer's Office", tag: "Modal Verbs", icon: '⚖️', bg: 'bg-lawyer', intro: "Rules, obligations, possibilities — modal verbs like can, must, should.", tasks: generateTasks('modal') },
+  { id: 'final', title: "Final Confession", tag: "Mixed Challenge", icon: '🏆', bg: 'bg-final', intro: "Last set of documents. Get these right and the case will be solved!", tasks: generateTasks('final') }
+];
+
+// ===== STATE =====
+let currentRoom = 0;
+let currentTask = 0;
+let coinCount = 0;
+const totalCoins = rooms.reduce((sum, r) => sum + r.tasks.length, 0);
+let taskAnswered = false;
+let elapsed = 0;
+let timerInterval = null;
+let gameFinished = false;
+
+// ===== TIMER =====
+function startTimer() {
+  timerInterval = setInterval(() => {
+    elapsed++;
+    document.getElementById('timer').textContent = formatTime(elapsed);
+  }, 1000);
+}
+function stopTimer() { clearInterval(timerInterval); }
+function formatTime(sec) {
+  const m = String(Math.floor(sec/60)).padStart(2,'0');
+  const s = String(sec%60).padStart(2,'0');
+  return `${m}:${s}`;
+}
+
+// ===== UI UPDATES =====
+function renderTabs() {
+  const tabsEl = document.getElementById('tabs');
+  tabsEl.innerHTML = '';
+  rooms.forEach((r, i) => {
+    const div = document.createElement('div');
+    let cls = 'tab';
+    if (i === currentRoom) cls += ' active';
+    else if (i < currentRoom) cls += ' done';
+    else cls += ' locked';
+    div.className = cls;
+    div.innerHTML = `<span class="num">Room ${i+1}</span>${r.tag}`;
+    tabsEl.appendChild(div);
+  });
+}
+
+function updateProgress() {
+  const pct = Math.round((coinCount/totalCoins)*100);
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('coinCount').textContent = coinCount;
+}
+
+function updateBackground() {
+  const bg = document.getElementById('roomBg');
+  const room = rooms[currentRoom];
+  bg.className = 'room-bg ' + room.bg;
+  bg.innerHTML = '<div class="pattern"></div>';
+}
+
+// ===== NORMALIZATION =====
+function normalize(str) {
+  return str.toLowerCase().replace(/[.!?]/g,'').replace(/\s+/g,' ').trim();
+}
+
+// ===== RENDER ROOM =====
+function renderRoom() {
+  const container = document.getElementById('rooms');
+  container.innerHTML = '';
+  const room = rooms[currentRoom];
+  updateBackground();
+
+  const roomDiv = document.createElement('div');
+  roomDiv.className = 'room active';
+
+  const intro = document.createElement('div');
+  intro.className = 'room-intro';
+  intro.innerHTML = `<div class="room-icon">${room.icon}</div>
+    <div>
+      <h2>Room ${currentRoom+1}: ${room.title}</h2>
+      <p>${room.intro}</p>
+      <span class="task-counter">Task ${currentTask+1} of ${room.tasks.length}</span>
+    </div>`;
+  roomDiv.appendChild(intro);
+
+  const task = room.tasks[currentTask];
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.id = 'taskCard';
+
+  let bodyHtml = `<span class="stamp" id="stamp"></span>
+    <div class="evidence-tag"><span class="task-icon">${roomIcons[task.type] || '📌'}</span>${task.tag}</div>
+    <div class="prompt">${task.prompt}</div>`;
+
+  if (task.type === 'gap' || task.type === 'transform') {
+    bodyHtml += `<input type="text" id="answerInput" placeholder="Type your answer..." autocomplete="off">
+      <div class="btn-row">
+        <button id="checkBtn">Check Answer</button>
+        <button class="secondary" id="nextBtn" style="display:none;">Next →</button>
+      </div>
+      <div class="feedback" id="feedback"></div>`;
+  } else if (task.type === 'mc') {
+    bodyHtml += `<div class="options" id="optionsWrap">`;
+    task.options.forEach((opt, i) => {
+      bodyHtml += `<div class="opt" data-i="${i}">${opt}</div>`;
+    });
+    bodyHtml += `</div>
+      <div class="btn-row">
+        <button id="checkBtn" disabled>Check Answer</button>
+        <button class="secondary" id="nextBtn" style="display:none;">Next →</button>
+      </div>
+      <div class="feedback" id="feedback"></div>`;
+  }
+
+  card.innerHTML = bodyHtml;
+  roomDiv.appendChild(card);
+  container.appendChild(roomDiv);
+
+  taskAnswered = false;
+  attachHandlers(task);
+}
+
+function attachHandlers(task) {
+  const checkBtn = document.getElementById('checkBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const feedback = document.getElementById('feedback');
+  const card = document.getElementById('taskCard');
+  const stamp = document.getElementById('stamp');
+  let selectedOpt = null;
+
+  if (task.type === 'mc') {
+    const opts = document.querySelectorAll('#optionsWrap .opt');
+    opts.forEach(opt => {
+      opt.addEventListener('click', () => {
+        if (taskAnswered) return;
+        opts.forEach(o => o.classList.remove('selected'));
+        opt.classList.add('selected');
+        selectedOpt = parseInt(opt.dataset.i);
+        checkBtn.disabled = false;
+      });
+    });
+  }
+
+  checkBtn.addEventListener('click', () => {
+    if (taskAnswered) return;
+    let isCorrect = false;
+
+    if (task.type === 'gap' || task.type === 'transform') {
+      const val = normalize(document.getElementById('answerInput').value);
+      isCorrect = task.answers.some(a => normalize(a) === val);
+    } else if (task.type === 'mc') {
+      isCorrect = selectedOpt === task.correct;
+      const opts = document.querySelectorAll('#optionsWrap .opt');
+      opts.forEach((o, i) => {
+        o.style.pointerEvents = 'none';
+        if (i === task.correct) o.classList.add('opt-correct');
+        else if (i === selectedOpt) o.classList.add('opt-wrong');
+      });
+    }
+
+    taskAnswered = true;
+    checkBtn.style.display = 'none';
+    nextBtn.style.display = 'inline-block';
+
+    feedback.classList.add('show');
+    if (isCorrect) {
+      coinCount++;
+      updateProgress();
+      feedback.classList.add('ok');
+      feedback.textContent = '✅ ' + task.ok + ' ⭐ +1';
+      card.classList.add('correct');
+      stamp.classList.add('show', 'correct-stamp');
+      stamp.textContent = '⭐ +1';
+      createSparkles();
+    } else {
+      feedback.classList.add('no');
+      feedback.textContent = '❌ ' + task.no;
+      card.classList.add('incorrect');
+      stamp.classList.add('show', 'wrong-stamp');
+      stamp.textContent = '❌ Try again';
+    }
+  });
+
+  nextBtn.addEventListener('click', advance);
+
+  const inputEl = document.getElementById('answerInput');
+  if (inputEl) {
+    inputEl.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !taskAnswered) checkBtn.click();
+    });
+  }
+}
+
+function createSparkles() {
+  const emojis = ['✨', '⭐', '🌟', '💫', '🎉'];
+  for (let i = 0; i < 6; i++) {
+    setTimeout(() => {
+      const el = document.createElement('div');
+      el.style.cssText = `position:fixed; pointer-events:none; z-index:999; font-size:${20+Math.random()*20}px; left:${10+Math.random()*80}%; top:${10+Math.random()*60}%; opacity:1; transition: all 0.8s ease-out;`;
+      el.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+      document.body.appendChild(el);
+      setTimeout(() => { el.style.transform = 'translateY(-80px) scale(2)'; el.style.opacity = '0'; }, 50);
+      setTimeout(() => el.remove(), 900);
+    }, i * 100);
+  }
+}
+
+function advance() {
+  const room = rooms[currentRoom];
+  if (currentTask < room.tasks.length - 1) {
+    currentTask++;
+    renderRoom();
+  } else if (currentRoom < rooms.length - 1) {
+    currentRoom++;
+    currentTask = 0;
+    renderTabs();
+    renderRoom();
+  } else {
+    finishCase();
+  }
+}
+
+function finishCase() {
+  gameFinished = true;
+  stopTimer();
+  document.getElementById('rooms').style.display = 'none';
+  document.querySelector('.tabs').style.display = 'none';
+  document.querySelector('.progress-wrap').style.display = 'none';
+  document.getElementById('roomBg').style.display = 'none';
+  document.getElementById('top-bar').style.display = 'none';
+  const certWrap = document.getElementById('certWrap');
+  certWrap.classList.add('show');
+  document.getElementById('certTime').textContent = formatTime(elapsed);
+  document.getElementById('certCoins').textContent = coinCount + ' / ' + totalCoins;
+
+  const name = prompt("🏆 Case Closed! Enter your detective name for the certificate:", "Detective");
+  document.getElementById('certName').textContent = name && name.trim() ? name.trim() : "Detective ___";
+}
+
+// ===== INIT =====
+document.getElementById('totalCoins').textContent = totalCoins;
+renderTabs();
+renderRoom();
+updateProgress();
+startTimer();
+</script>
+</body>
+</html>
